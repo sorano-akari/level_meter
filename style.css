@@ -1,0 +1,118 @@
+/* ベースリセットとフォント */
+body {
+    background-color: #0d000d; 
+    color: #f0f0f0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    flex-direction: column;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    padding: 30px; 
+    background-color: #1a001a; 
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7); 
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+h1 {
+    color: #ffccff; 
+    font-size: 2.8em;
+    letter-spacing: 1px;
+    text-shadow: 0 0 15px rgba(255, 100, 255, 0.8);
+}
+
+/* ビジュアライザーエリアとキャンバス (★★ここを修正★★) */
+.visualizer-area {
+    position: relative;
+    border: 6px solid #660066; 
+    border-radius: 8px;
+    /* グラフが親要素の境界をはみ出すのを防ぐ */
+    overflow: hidden; 
+    margin-bottom: 25px;
+    background-color: #1e001e; 
+    
+    /* ★★★ 修正: 高さの計算ミスを避けるため、高さを固定 ★★★ */
+    height: 500px; /* ← 高さを確定 */
+}
+
+#audio-visualizer {
+    display: block;
+    /* 親要素の幅に合わせて表示サイズを強制的に100%にする */
+    width: 100%; 
+    height: 100%; /* ← 親要素の高さ(500px)に合わせる */
+}
+
+
+/* コントロールボタン (変更なし) */
+.controls {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: center; 
+    margin-top: 10px;
+}
+
+.btn {
+    padding: 15px 30px;
+    font-size: 1.1em;
+    font-weight: bold;
+    border: 1px solid transparent; 
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s, border-color 0.2s;
+    text-transform: uppercase;
+}
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Primary, Secondary, Tertiary Button Styles (変更なし) */
+.btn.primary { background-color: #990099; color: white; border-color: #bb00bb; }
+.btn.primary:not(:disabled):hover { background-color: #bb00bb; transform: translateY(-1px); box-shadow: 0 5px 18px rgba(153, 0, 153, 0.8); }
+
+.btn.secondary { background-color: #00cc66; color: #1a001a; border-color: #00ff80; }
+.btn.secondary:not(:disabled):hover { background-color: #00ff80; transform: translateY(-1px); box-shadow: 0 5px 18px rgba(0, 204, 102, 0.8); }
+
+.btn.tertiary { background-color: #ff66cc; color: #1a001a; border-color: #ff99e6; }
+.btn.tertiary:not(:disabled):hover { background-color: #ff99e6; transform: translateY(-1px); box-shadow: 0 5px 18px rgba(255, 102, 204, 0.8); }
+
+
+/* カラー選択UIのスタイル (変更なし) */
+.select-container {
+    display: flex;
+    align-items: center;
+    color: #ffccff; 
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+#color-select {
+    padding: 10px 15px;
+    margin-left: 10px;
+    font-size: 1em;
+    border-radius: 6px;
+    background-color: #330033; 
+    color: white;
+    border: 2px solid #660066;
+    appearance: none; 
+}
+
+#color-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

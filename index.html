@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Audio Visualizer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    
+    <div class="container">
+        
+        <header>
+            <h1>SPECTRUM ANALYZER</h1>
+        </header>
+        
+        <div class="visualizer-area">
+            <canvas id="audio-visualizer"></canvas>
+        </div>
+        
+        <div class="progress-area">
+            <div id="progress-bar-container">
+                <div id="progress-bar"></div>
+                <div id="playhead"></div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            
+            <button id="rewind-button" class="btn primary" disabled>⏪ REWIND</button> 
+            
+            <input type="file" id="audio-file" accept="audio/*" style="display: none;">
+            <button id="file-select-button" class="btn secondary">🔊 LOAD AUDIO</button>
+            
+            <button id="toggle-play-button" class="btn tertiary" disabled>▶️ PLAY</button>
+            
+            <button id="toggle-mode-button" class="btn primary" disabled>🔍 モード: 詳細 (FFTビン)</button>
+            
+            <button id="toggle-label-button" class="btn secondary" disabled>📊 目盛り: ON</button>
+            
+            <div class="select-container">
+                <label for="color-select">カラーモード:</label>
+                <select id="color-select" disabled>
+                    <option value="muffet">MUFFET (Rainbow)</option>
+                    <option value="mono">MONO (Cool Blue)</option>
+                    <option value="hifi">HIFI (Comp-Style)</option>
+                </select>
+            </div>
+            
+            <button id="toggle-chroma-button" class="btn tertiary" disabled>⚫ 背景: ダーク OFF</button>
+        </div>
+        
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
