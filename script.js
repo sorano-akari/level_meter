@@ -13,6 +13,7 @@ const progressBarContainer = document.getElementById('progress-bar-container');
 const progressBar = document.getElementById('progress-bar');
 const playhead = document.getElementById('playhead');
 const rewindButton = document.getElementById('rewind-button');
+const toggleChromaColorButton = document.getElementById('toggle-chroma-color-button');
 
 
 // グローバルなオーディオ関連の変数
@@ -33,6 +34,7 @@ let displayMode = 'detail';
 let showLabels = true;          
 let colorMode = 'muffet';       
 let chromaKeyMode = false;      
+let chromaColorMode = 'auto'; // 'auto', 'green', 'blue' のいずれか
 const TARGET_GROUP_BANDS = 20; 
 const VERTICAL_STEPS = 20;      
 
@@ -75,6 +77,13 @@ audioInput.addEventListener('change', (e) => {
             colorSelect.disabled = false;      
             toggleChromaButton.disabled = false; 
             rewindButton.disabled = false; 
+            
+            // ロード時にクロマキー色切替ボタンの状態をリセット
+            if (chromaKeyMode) {
+                toggleChromaColorButton.disabled = false;
+            } else {
+                 toggleChromaColorButton.disabled = true;
+            }
             
             pauseTime = 0;
             currentPlayTime = 0;
@@ -144,7 +153,27 @@ colorSelect.addEventListener('change', (e) => {
 
 toggleChromaButton.addEventListener('click', () => {
     chromaKeyMode = !chromaKeyMode;
-    toggleChromaButton.textContent = chromaKeyMode ? '💚 背景: クロマキー ON' : '⚫ 背景: ダーク OFF';
+    
+    if (chromaKeyMode) {
+        toggleChromaButton.textContent = `💚 背景: クロマキー ON`;
+        toggleChromaColorButton.disabled = false; 
+    } else {
+        toggleChromaButton.textContent = `⚫ 背景: ダーク OFF`;
+        toggleChromaColorButton.disabled = true;
+    }
+});
+
+toggleChromaColorButton.addEventListener('click', () => {
+    if (chromaColorMode === 'auto') {
+        chromaColorMode = 'green';
+        toggleChromaColorButton.textContent = '🟢 CHROMA: GREEN';
+    } else if (chromaColorMode === 'green') {
+        chromaColorMode = 'blue';
+        toggleChromaColorButton.textContent = '🔵 CHROMA: BLUE';
+    } else {
+        chromaColorMode = 'auto';
+        toggleChromaColorButton.textContent = '🟩 CHROMA: AUTO';
+    }
 });
 
 
@@ -253,7 +282,32 @@ function draw() {
     requestAnimationFrame(draw);
 
     // 1. 背景色の描画
-    ctx.fillStyle = chromaKeyMode ? '#00FF00' : '#1e001e'; 
+    let backgroundColor = '#1e001e'; // デフォルトのダーク背景
+    
+    if (chromaKeyMode) {
+        let isBlueRequired = false;
+
+        if (chromaColorMode === 'auto') {
+            // 自動判定: HIFI/黄色グラフモードは青色を推奨（グラフの緑/黄色を透過させないため）
+            if (colorMode === 'hifi' || colorMode === 'mono_yellow') {
+                 isBlueRequired = true;
+            }
+        } else if (chromaColorMode === 'blue') {
+            // 手動で青が選ばれた場合
+            isBlueRequired = true;
+        }
+        
+        // 色の適用
+        if (isBlueRequired) {
+            // 青色（ブルースクリーン）を背景に設定
+            backgroundColor = '#0000FF'; 
+        } else {
+            // 緑色（グリーンスクリーン）を背景に設定 (手動緑 または 自動で青が不要な場合)
+            backgroundColor = '#00FF00'; 
+        }
+    } 
+    
+    ctx.fillStyle = backgroundColor; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (!analyser) return;
@@ -289,7 +343,7 @@ function draw() {
     ctx.fillStyle = 'white';
     ctx.textAlign = 'center';
 
-    // 4. 縦軸（Amplitude / dB）の目盛線とラベルの描画 (★単位削除済み★)
+    // 4. 縦軸（Amplitude / dB）の目盛線とラベルの描画 (単位削除済み)
     const dbRange = analyser.maxDecibels - analyser.minDecibels; 
     const dbSteps = [0, 20, 40, 60, 80]; 
     ctx.textAlign = 'right';
@@ -308,15 +362,12 @@ function draw() {
                 ctx.stroke();
             }
             ctx.fillStyle = 'white'; 
-            // 修正: 単位 ' dB' を削除
             ctx.fillText(`-${db}`, sideMarginLeft - 10, y + 6); 
         }
     });
     
     ctx.fillStyle = 'white'; 
-    // 修正: 単位 ' dB' を削除
     ctx.fillText(`-0`, sideMarginLeft - 10, startY + 6); 
-    // 修正: 単位 ' dB' を削除
     ctx.fillText(`-90`, sideMarginLeft - 10, endY + 6); 
     
     if (showLabels) {
@@ -385,9 +436,9 @@ function draw() {
 
         if (colorMode === 'hifi') {
             const colors = [
-                { steps: 2,  color: '#FF0000' }, 
-                { steps: 3,  color: '#FFFF00' }, 
-                { steps: 15, color: '#00FF00' }  
+                { steps: 2,  color: '#FF0000' }, // 赤
+                { steps: 3,  color: '#FFFF00' }, // 黄
+                { steps: 15, color: '#00FF00' }  // 緑
             ];
             
             let currentY = endY; 
@@ -413,6 +464,14 @@ function draw() {
                 if (stepsRemaining <= 0) break;
             }
             
+        } else if (colorMode === 'mono_yellow') { 
+            // 棒グラフ全体を単一の黄色で描画
+            
+            ctx.fillStyle = '#FFFF00'; // 純粋な黄色
+            const finalBarHeight = quantizedSteps * stepHeight;
+            
+            ctx.fillRect(barX, endY - finalBarHeight, currentBarWidth, finalBarHeight);
+            
         } else {
             let barColor;
             
@@ -430,7 +489,7 @@ function draw() {
         }
     }
     
-    // 6. 横軸の目盛りテキストとタイトルの描画 (★単位削除済み★)
+    // 6. 横軸の目盛りテキストとタイトルの描画 (単位削除済み)
     const sampleRate = audioContext ? audioContext.sampleRate : 44100;
     const maxFreq = sampleRate / 2; 
 
@@ -446,10 +505,8 @@ function draw() {
         if (ratio >= 0 && ratio <= 1) {
             let label;
             if (freq >= 1000) {
-                // 修正: 単位 ' kHz' を削除
                 label = (freq / 1000).toFixed(1).replace('.0', ''); 
             } else {
-                // 修正: 単位 ' Hz' を削除
                 label = freq.toString();
             }
             
@@ -466,7 +523,6 @@ function draw() {
     });
 
     ctx.textAlign = 'right';
-    // タイトルには単位を維持
     ctx.fillText('FREQUENCY (Hz)', endX, endY + 60); 
 }
 
