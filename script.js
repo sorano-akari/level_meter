@@ -14,7 +14,7 @@ const progressBar = document.getElementById('progress-bar');
 const playhead = document.getElementById('playhead');
 const rewindButton = document.getElementById('rewind-button');
 const toggleChromaColorButton = document.getElementById('toggle-chroma-color-button');
-
+const peakHoldCheckbox = document.getElementById('peak-hold-checkbox');
 
 // グローバルなオーディオ関連の変数
 let audioContext;
@@ -28,6 +28,9 @@ let startTime = 0;
 let pauseTime = 0; 
 let currentPlayTime = 0; 
 let progressInterval; 
+
+// ピークホールド用変数
+let peakDataArray = [];
 
 // 表示設定変数
 let displayMode = 'detail';     
@@ -394,6 +397,11 @@ function draw() {
         groupSize = Math.floor(bufferLength / numBarsToDraw);
         groupSize = Math.max(1, groupSize); 
     }
+
+    // ピーク保持配列の初期化
+    if (peakDataArray.length !== numBarsToDraw) {
+        peakDataArray = new Array(numBarsToDraw).fill(0);
+    }
     
     const fixedDrawWidth = displayWidth / numBarsToDraw; 
     const barWidth = fixedDrawWidth * 0.8; 
@@ -421,6 +429,18 @@ function draw() {
 
         const continuousBarHeight = graphHeight * (data / 255); 
         let quantizedSteps = Math.round(continuousBarHeight / stepHeight);
+
+        // --- ピークホールドの計算 ---
+        if (peakHoldCheckbox.checked) {
+            if (quantizedSteps >= peakDataArray[i]) {
+                peakDataArray[i] = quantizedSteps; 
+            } else {
+                peakDataArray[i] -= 0.15; // 落下速度
+                if (peakDataArray[i] < 0) peakDataArray[i] = 0;
+            }
+        } else {
+            peakDataArray[i] = 0;
+        }
         
         let currentBarWidth = barWidth;
         
@@ -435,16 +455,21 @@ function draw() {
 
 
         if (colorMode === 'hifi') {
+            // 5色の定義 (各4ステップで計20ステップ)
             const colors = [
-                { steps: 2,  color: '#FF0000' }, // 赤
-                { steps: 3,  color: '#FFFF00' }, // 黄
-                { steps: 15, color: '#00FF00' }  // 緑
+                { steps: 4, color: '#FF0000' }, // 赤
+                { steps: 4, color: '#FF8800' }, // オレンジ
+                { steps: 4, color: '#FFFF00' }, // 黄
+                { steps: 4, color: '#88FF00' }, // 黄緑
+                { steps: 4, color: '#00FF00' }  // 緑
             ];
             
             let currentY = endY; 
             let stepsRemaining = quantizedSteps;
             
-            for (const section of colors.reverse()) { 
+            const drawingOrder = [...colors].reverse(); 
+
+            for (const section of drawingOrder) { 
                 const maxStepsForSection = section.steps;
                 const stepsToDraw = Math.min(stepsRemaining, maxStepsForSection);
                 
@@ -453,7 +478,6 @@ function draw() {
                     
                     for (let step = 0; step < stepsToDraw; step++) {
                         const blockY = currentY - (step + 1) * stepHeight;
-                        
                         ctx.fillRect(barX, blockY, currentBarWidth, stepHeight * 0.9);
                     }
                     
@@ -463,18 +487,28 @@ function draw() {
                 
                 if (stepsRemaining <= 0) break;
             }
+
+            // ピーク線の描画
+            if (peakHoldCheckbox.checked && peakDataArray[i] > 0) {
+                const peakY = endY - Math.ceil(peakDataArray[i]) * stepHeight;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(barX, peakY, currentBarWidth, 2); 
+            }
             
         } else if (colorMode === 'mono_yellow') { 
-            // 棒グラフ全体を単一の黄色で描画
-            
-            ctx.fillStyle = '#FFFF00'; // 純粋な黄色
+            ctx.fillStyle = '#FFFF00'; 
             const finalBarHeight = quantizedSteps * stepHeight;
-            
             ctx.fillRect(barX, endY - finalBarHeight, currentBarWidth, finalBarHeight);
+
+            // ピーク線の描画(黄色モード)
+            if (peakHoldCheckbox.checked && peakDataArray[i] > 0) {
+                const peakY = endY - peakDataArray[i] * stepHeight;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(barX, peakY, currentBarWidth, 2);
+            }
             
         } else {
             let barColor;
-            
             if (colorMode === 'muffet') {
                 const ratio = i / numBarsToDraw; 
                 barColor = `rgb(${Math.floor(102 + 153 * ratio)}, ${Math.floor(100 * ratio)}, ${Math.floor(102 + 48 * ratio)})`;
@@ -484,8 +518,14 @@ function draw() {
             
             ctx.fillStyle = barColor; 
             const finalBarHeight = quantizedSteps * stepHeight;
-            
             ctx.fillRect(barX, endY - finalBarHeight, currentBarWidth, finalBarHeight);
+
+            // ピーク線の描画(通常モード)
+            if (peakHoldCheckbox.checked && peakDataArray[i] > 0) {
+                const peakY = endY - peakDataArray[i] * stepHeight;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(barX, peakY, currentBarWidth, 2);
+            }
         }
     }
     
@@ -499,7 +539,6 @@ function draw() {
     
     freqLabels.forEach(freq => {
         const ratio = freq / maxFreq; 
-        
         const xPos = startX + displayWidth * ratio; 
         
         if (ratio >= 0 && ratio <= 1) {
@@ -517,7 +556,6 @@ function draw() {
             } else {
                 ctx.textAlign = 'center';
             }
-            
             ctx.fillText(label, xPos, endY + 30); 
         }
     });
